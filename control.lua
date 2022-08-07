@@ -10,7 +10,8 @@ local REACTOR = "reactor"
 local ROBOPORT = "roboport"
 local SILO = "rocket-silo"
 local ARTILLERY = "artillery-turret"
-local CHEST = "logistic-container" -- requester: type = "logistic-container" && logistic_mode = "requester"
+local CHEST = "container"
+local LCHEST = "logistic-container" -- requester: type = "logistic-container" && logistic_mode = "requester"
 local LINKEDCHEST = "linked-container" -- linked-container is used for example in the mod Space-Exploration. ("Arcolink Storage")
 local LOCO = "locomotive"
 local WAGON = "cargo-wagon"
@@ -33,6 +34,7 @@ local SupportedTypes = {
   [SILO] = true,
   [ARTILLERY] = true,
   [CHEST] = true,
+  [LCHEST] = true,
   [LINKEDCHEST] = true,
   [CAR] = false,
   [SPIDER] = false,
@@ -304,6 +306,7 @@ function UpdateSensor(itemSensor)
   local remaining_fuel = 0
   local signals = {}
   local signalIndex = 1
+  local slot_values = {e=0, f=0, t=0} -- empty, full, total
 
   -- Vehicle signals and movement detection
   if connectedEntity.type == LOCO then
@@ -413,6 +416,33 @@ function UpdateSensor(itemSensor)
       signals[signalIndex] = { index = signalIndex, signal = {type = "fluid",name = fluid.name}, count = ceil(fluid.amount) }
       signalIndex = signalIndex+1
     end
+  end
+
+  -- compute total, empty and filled slots and create the respective virtual signals T, E and F
+  local inv = connectedEntity.get_inventory(defines.inventory.chest)
+  if inv then
+    for n = 1, #inv do
+      local item_stack = inv[n]
+      if item_stack and item_stack.valid_for_read then
+        slot_values.f = slot_values.f + 1
+        slot_values.t = slot_values.t + 1
+      else
+        slot_values.e = slot_values.e + 1
+        slot_values.t = slot_values.t + 1
+      end
+    end
+  end
+  if slot_values.t ~= 0 then
+    signals[signalIndex] = { index = signalIndex, signal = {type = "virtual",name = "signal-T"}, count = slot_values.t }
+    signalIndex = signalIndex+1
+  end
+  if slot_values.f ~= 0 then
+    signals[signalIndex] = { index = signalIndex, signal = {type = "virtual",name = "signal-F"}, count = slot_values.f }
+    signalIndex = signalIndex+1
+  end
+  if slot_values.e ~= 0 then
+    signals[signalIndex] = { index = signalIndex, signal = {type = "virtual",name = "signal-E"}, count = slot_values.e }
+    signalIndex = signalIndex+1
   end
 
   -- get items in all inventories
