@@ -419,6 +419,7 @@ function UpdateSensor(itemSensor)
   end
 
   -- compute total, empty and filled slots and create the respective virtual signals T, E and F
+  -- inspired by and taken parts from https://mods.factorio.com/mod/EmptySlotsReader
   local inv = connectedEntity.get_inventory(defines.inventory.chest)
   if inv then
     for n = 1, #inv do
